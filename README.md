@@ -1,23 +1,21 @@
 # Multi-Site Enterprise Network Lab (Cisco Packet Tracer)
 
-A two-site enterprise network built in Cisco Packet Tracer. It combines Layer 2 switching (VLANs, VTP, EtherChannel, STP, port security) with Layer 3 routing (router-on-a-stick, EIGRP, default and backup routes to an ISP), and adds DHCP and DNS services.
+A two-site enterprise network built in Cisco Packet Tracer. It combines Layer 2 switching (VLANs, VTP, EtherChannel, STP, port security) with Layer 3 routing (router-on-a-stick, EIGRP, default and backup routes to an ISP), and adds DHCP, DNS and TFTP configuration backup.
 
-> **Origin:** The topology and the base requirements come from a practice exercise in my Computer Networking course at Business and Technology University (BTU). The configuration, testing and the DHCP and DNS additions are my own work.
+> **Origin:** The topology and the base requirements come from a practice exercise in my Computer Networking course at Business and Technology University (BTU). The configuration, testing and the DHCP, DNS and TFTP backup additions are my own work.
 
 ## Skills Demonstrated
 
-VLANs and inter-VLAN routing · VTP (server, client, transparent) · EtherChannel (LACP, PAgP, static) · STP root bridge planning · CDP control · Port security · EIGRP · Static, default and summary routes · DHCP on Cisco routers · DNS · VLSM subnetting · Troubleshooting with `show` commands
+VLANs and inter-VLAN routing · VTP (server, client, transparent) · EtherChannel (LACP, PAgP, static) · STP root bridge planning · CDP control · Port security · EIGRP · Static, default and summary routes · DHCP on Cisco routers · DNS · TFTP configuration backup · VLSM subnetting · Troubleshooting with `show` commands
 
 ## Topology
 
-<img width="1882" height="916" alt="Screenshot 2026-11-25 220038" src="https://github.com/user-attachments/assets/575e8439-612a-42e9-9b8c-67a3c6994e7d" />
-
+<img width="1937" height="955" alt="image" src="https://github.com/user-attachments/assets/3e4fc200-1e53-4d75-8634-c7f1364f79cb" />
 
 | File | Description |
 |------|-------------|
 | `EtherChannel-CDP-STP-VTP-EIGRP.pkt` | Packet Tracer project file |
-| `topology.png` | Topology with the exercise requirements |
-| `screenshots/` | Test results (ping tests) |
+| `configs/` | Saved running-config of each device (TFTP backup) |
 
 ## Addressing Plan
 
@@ -60,6 +58,14 @@ LANs and VLANs use `172.16.0.0/16` (VLSM). Point-to-point links use `200.0.0.0`.
 
 R1 also has three loopback interfaces that simulate additional LANs (`10.0.4.1`, `10.0.0.1`, `10.0.6.1`).
 
+### Servers
+
+| Server | Role | Address | Network |
+|--------|------|---------|---------|
+| Server0 | DNS | 172.16.1.200 | Site 2, VLAN 500 |
+| TFTP | Configuration backup | 172.16.2.20 | Site 1, VLAN 50 |
+| Server1 | google.com (ISP side) | 111.0.0.2 | ISP |
+
 ## What Was Configured
 
 ### Layer 2 (switching)
@@ -78,6 +84,7 @@ R1 also has three loopback interfaces that simulate additional LANs (`10.0.4.1`,
 - **ISP routing:** The network has a default route towards the ISP. The ISP has one static summary route that covers all the LANs. A backup static route goes over the serial link, so if the Ethernet link to the ISP fails, traffic can still get out.
 - **DHCP (my addition):** R3 and R4 act as DHCP servers with one pool per VLAN. The first six addresses of every subnet are excluded for the gateway and static devices. Clients automatically get an IP address, the default gateway and the DNS server `172.16.1.200`.
 - **DNS (my addition):** A DNS server (Server0, `172.16.1.200`) resolves `google.com` to Server1 (`111.0.0.2`) on the ISP side. This lets hosts use names instead of IP addresses.
+- **TFTP configuration backup (my addition):** I saved the running configuration of the routers and switches to a TFTP server (`172.16.2.20`) with `copy running-config tftp`, so a configuration can be restored if a device fails or is reset.
 
 ## Verification
 
@@ -134,17 +141,25 @@ VTP Domain Name                 : R3
 Configuration Revision          : 15
 ```
 
+### Configuration backup (TFTP)
+
+```
+R3#copy running-config tftp
+Address or name of remote host []? 172.16.2.20
+Destination filename [R3-confg]? R3-confg
+Writing running-config...!!
+[OK]
+```
+
 ### Connectivity tests
 
 - **DNS and internet:** `ping google.com` from a host resolves the name to `111.0.0.2` and gets replies from the ISP-side server. The first packet times out while ARP resolves, then the following replies succeed.
 
-<img width="1126" height="822" alt="Screenshot 2026-11-25 221207" src="https://github.com/user-attachments/assets/8d635971-892b-4342-b254-71ce9050dbce" />
-
+  <img width="1126" height="822" alt="Screenshot 2026-11-25 221207" src="https://github.com/user-attachments/assets/8d635971-892b-4342-b254-71ce9050dbce" />
 
 - **Inter-site routing:** A host at Site 1 pings the DNS server `172.16.1.200` at Site 2 with 0% loss (TTL 126, which means two router hops).
 
   <img width="1186" height="877" alt="Screenshot 2026-11-25 221307" src="https://github.com/user-attachments/assets/6c2b9efd-3d1f-4fbe-ac59-8a2b0122fc15" />
-
 
 ## What I Learned
 
@@ -154,4 +169,5 @@ Configuration Revision          : 15
 - **Router-on-a-stick connects VLANs with one link.** One physical link with a subinterface per VLAN is enough for inter-VLAN routing.
 - **DHCP and DNS work as one chain.** In the test, a host got its address and DNS server from DHCP, resolved `google.com` through DNS, and reached the server through EIGRP and the default route. The first ping timed out while ARP resolved, and then it worked.
 - **Small settings improve security.** Port security, passive interfaces, shutting down unused ports and turning off CDP reduce the attack surface. This is the part that made me more interested in network security.
+- **Backups protect the work.** Saving each device's running configuration to a TFTP server means a failed or reset device can be restored quickly.
 - **`show` commands are the best way to check the work.** I used `show etherchannel summary`, `show vtp status`, `show ip eigrp neighbors` and `ping` to confirm that each part worked before moving on.
