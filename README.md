@@ -16,7 +16,6 @@ VLANs and inter-VLAN routing · VTP (server, client, transparent) · EtherChanne
 | File | Description |
 |------|-------------|
 | `EtherChannel-CDP-STP-VTP-EIGRP.pkt` | Packet Tracer project file |
-| `configs/` | Saved running-config of each device (TFTP backup) |
 
 ## Addressing Plan
 
