@@ -10,7 +10,8 @@ VLANs and inter-VLAN routing · VTP (server, client, transparent) · EtherChanne
 
 ## Topology
 
-<img width="1937" height="955" alt="image" src="https://github.com/user-attachments/assets/3e4fc200-1e53-4d75-8634-c7f1364f79cb" />
+<img width="2641" height="1104" alt="topology" src="https://github.com/user-attachments/assets/8581b51b-fdd5-475e-9df1-3bd92de9cdd2" />
+
 
 | File | Description |
 |------|-------------|
