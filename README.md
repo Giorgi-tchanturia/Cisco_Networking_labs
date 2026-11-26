@@ -1,12 +1,12 @@
 # Multi-Site Enterprise Network Lab (Cisco Packet Tracer)
 
-A two-site enterprise network built in Cisco Packet Tracer. It combines Layer 2 switching (VLANs, VTP, EtherChannel, STP, port security) with Layer 3 routing (router-on-a-stick, EIGRP, default and backup routes to an ISP), and adds DHCP, DNS and TFTP configuration backup.
+A two-site enterprise network built in Cisco Packet Tracer. It combines Layer 2 switching (VLANs, VTP, EtherChannel, STP, port security) with Layer 3 routing (router-on-a-stick, EIGRP, default and backup routes to an ISP), and adds DHCP, DNS, TFTP configuration backup, SSH remote access and an extended ACL.
 
-> **Origin:** The topology and the base requirements come from a practice exercise in my Computer Networking course at Business and Technology University (BTU). The configuration, testing and the DHCP, DNS and TFTP backup additions are my own work.
+> **Origin:** The topology and the base requirements come from a practice exercise in my Computer Networking course at Business and Technology University (BTU). The configuration, testing and the DHCP, DNS, TFTP backup, SSH and ACL additions are my own work.
 
 ## Skills Demonstrated
 
-VLANs and inter-VLAN routing · VTP (server, client, transparent) · EtherChannel (LACP, PAgP, static) · STP root bridge planning · CDP control · Port security · EIGRP · Static, default and summary routes · DHCP on Cisco routers · DNS · TFTP configuration backup · VLSM subnetting · Troubleshooting with `show` commands
+VLANs and inter-VLAN routing · VTP (server, client, transparent) · EtherChannel (LACP, PAgP, static) · STP root bridge planning · CDP control · Port security · EIGRP · Static, default and summary routes · DHCP on Cisco routers · DNS · TFTP configuration backup · SSH · Extended ACL · VLSM subnetting · Troubleshooting with `show` commands
 
 ## Topology
 
@@ -85,6 +85,8 @@ R1 also has three loopback interfaces that simulate additional LANs (`10.0.4.1`,
 - **DHCP (my addition):** R3 and R4 act as DHCP servers with one pool per VLAN. The first six addresses of every subnet are excluded for the gateway and static devices. Clients automatically get an IP address, the default gateway and the DNS server `172.16.1.200`.
 - **DNS (my addition):** A DNS server (Server0, `172.16.1.200`) resolves `google.com` to Server1 (`111.0.0.2`) on the ISP side. This lets hosts use names instead of IP addresses.
 - **TFTP configuration backup (my addition):** I saved the running configuration of the routers and switches to a TFTP server (`172.16.2.20`) with `copy running-config tftp`, so a configuration can be restored if a device fails or is reset.
+- **SSH (my addition):** R3 can be managed remotely over SSH version 2 only. Telnet is disabled with `transport input ssh`, and users log in with a local account (`login local`). This keeps the management session encrypted.
+- **Extended ACL (my addition):** On R3, the ACL `BLOCK-V10-TO-MGMT` stops VLAN 10 (`172.16.2.224/27`) from reaching the Management network (`172.16.2.0/26`) and permits all other traffic. It is applied inbound on the VLAN 10 subinterface `Gi0/1.10`.
 
 ## Verification
 
@@ -151,6 +153,36 @@ Writing running-config...!!
 [OK]
 ```
 
+### SSH (R3)
+
+```
+R3#show ip ssh
+SSH Enabled - version 2.0
+Authentication timeout: 120 secs; Authentication retries: 3
+
+R3#show running-config | section line vty
+line vty 0 4
+ login local
+ transport input ssh
+```
+
+<img width="1082" height="807" alt="Screenshot 2026-11-26 041241" src="https://github.com/user-attachments/assets/184377c3-cf3f-45b2-93d9-3019369da4df" />
+
+
+### Extended ACL (R3)
+
+```
+R3#show access-lists
+Extended IP access list BLOCK-V10-TO-MGMT
+    10 deny ip 172.16.2.224 0.0.0.31 172.16.2.0 0.0.0.63
+    20 permit ip any any
+```
+
+A host in VLAN 10 can no longer reach the Management network, while its traffic to other networks still works.
+
+<img width="941" height="812" alt="image" src="https://github.com/user-attachments/assets/cc45d375-2f2f-438a-a4e8-c11677aaa7af" />
+
+
 ### Connectivity tests
 
 - **DNS and internet:** `ping google.com` from a host resolves the name to `111.0.0.2` and gets replies from the ISP-side server. The first packet times out while ARP resolves, then the following replies succeed.
@@ -169,5 +201,6 @@ Writing running-config...!!
 - **Router-on-a-stick connects VLANs with one link.** One physical link with a subinterface per VLAN is enough for inter-VLAN routing.
 - **DHCP and DNS work as one chain.** In the test, a host got its address and DNS server from DHCP, resolved `google.com` through DNS, and reached the server through EIGRP and the default route. The first ping timed out while ARP resolved, and then it worked.
 - **Small settings improve security.** Port security, passive interfaces, shutting down unused ports and turning off CDP reduce the attack surface. This is the part that made me more interested in network security.
+- **Access control starts with small rules.** An ACL decides who can reach which network, and SSH protects remote administration with encryption, unlike Telnet. Both are basic but important security steps.
 - **Backups protect the work.** Saving each device's running configuration to a TFTP server means a failed or reset device can be restored quickly.
 - **`show` commands are the best way to check the work.** I used `show etherchannel summary`, `show vtp status`, `show ip eigrp neighbors` and `ping` to confirm that each part worked before moving on.
